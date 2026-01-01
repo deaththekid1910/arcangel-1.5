@@ -1,8 +1,8 @@
-// index.js - Arcangel 1.5 (registro correcto en tu hoja + recibo elegante)
+// index.js - Arcangel 1.5 (versión final corregida - enero 2026)
 
 require('dotenv').config();
 
-const express = require('express';
+const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
@@ -17,7 +17,7 @@ const accountSid = process.env.TWILIO_SID;
 const authToken = process.env.TWILIO_AUTH;
 const client = new Twilio(accountSid, authToken);
 
-// Google
+// Google Sheets
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const authSheets = new google.auth.GoogleAuth({
   credentials: creds,
@@ -39,7 +39,7 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Descargar imagen y procesar
+// Descargar imagen
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -52,11 +52,11 @@ async function descargarImagen(mediaUrl, telefono) {
 
     await generarReciboYEnviar(telefono, filePath);
   } catch (error) {
-    console.error('Error descargando:', error.message);
+    console.error('Error descargando imagen:', error.message);
   }
 }
 
-// Generar recibo elegante y registrar en Sheets
+// Generar recibo elegante y registrar
 async function generarReciboYEnviar(telefono, filePath) {
   try {
     const fecha = new Date();
@@ -64,7 +64,7 @@ async function generarReciboYEnviar(telefono, filePath) {
     const reciboPath = path.join(RECIBOS_DIR, `${telefono}.png`);
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
-    // === Generación del recibo elegante con canvas ===
+    // Canvas para recibo elegante
     const width = 600;
     const height = 900;
     const canvas = createCanvas(width, height);
@@ -74,7 +74,7 @@ async function generarReciboYEnviar(telefono, filePath) {
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde elegante
+    // Borde
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
@@ -93,7 +93,7 @@ async function generarReciboYEnviar(telefono, filePath) {
     ctx.font = 'bold 24px Arial';
     ctx.fillText('● PAGO RECIBIDO ●', width / 2, 200);
 
-    // Línea dorada
+    // Línea
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -113,7 +113,7 @@ async function generarReciboYEnviar(telefono, filePath) {
     ctx.fillText(`Fecha: ${fecha.toLocaleString('es-VE')}`, 80, y);
     y += 100;
 
-    // Mensaje de confianza
+    // Mensaje confianza
     ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
@@ -140,29 +140,24 @@ async function generarReciboYEnviar(telefono, filePath) {
     await client.messages.create({
       from: 'whatsapp:+14155238886',
       to: `whatsapp:+${telefono}`,
-      body: '¡Gracias por tu pago!\n\nTe adjuntamos tu comprobante oficial de recepción.\nEstamos validando tu transferencia.',
+      body: '¡Gracias por tu pago!\n\nTe adjuntamos tu comprobante oficial.\nEstamos validando tu transferencia.',
       mediaUrl: [mediaUrl]
     });
     console.log('Recibo enviado a:', telefono);
 
-    // === Registro en tu hoja exacta (A:D) ===
+    // Registrar en Sheets (tu hoja exacta)
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'A:D',  // Columnas A, B, C, D
+      range: 'A:D',
       valueInputOption: 'USER_ENTERED',
       resource: {
-        values: [[
-          idOperacion,              // A: id
-          telefono,                 // B: numero cliente
-          fecha.toLocaleString('es-VE'),  // C: fecha de respuesta
-          comprobanteUrl            // D: comprobante de pago
-        ]]
+        values: [[idOperacion, telefono, fecha.toLocaleString('es-VE'), comprobanteUrl]]
       }
     });
-    console.log('Registrado correctamente en Sheets:', idOperacion);
+    console.log('Registrado en Sheets:', idOperacion);
 
   } catch (error) {
-    console.error('Error generando/enviando o registrando:', error.message);
+    console.error('Error generando/enviando:', error.message);
   }
 }
 
@@ -178,7 +173,7 @@ app.post('/whatsapp', async (req, res) => {
       await client.messages.create({
         from: 'whatsapp:+14155238886',
         to: `whatsapp:+${from}`,
-        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante.'
+        body: 'Hola, envía el capture de tu pago para generar tu comprobante.'
       });
     }
 
