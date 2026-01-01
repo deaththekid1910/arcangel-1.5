@@ -4,7 +4,6 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "./render-build.sh",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -16,10 +15,10 @@
     "@google-cloud/vision": "^5.3.4",
     "axios": "^1.7.7",
     "body-parser": "^1.20.3",
+    "canvas": "^2.11.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "googleapis": "^144.0.0",
-    "puppeteer": "^23.6.0",
     "twilio": "^5.3.4",
     "uuid": "^10.0.0"
   }
