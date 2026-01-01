@@ -1,10 +1,10 @@
-// index.js - Arcangel 1.5 (con Document AI corregido - enero 2026)
+// index.js - Arcangel 1.5 (Document AI funcionando - enero 2026)
 
 require('dotenv').config();
 
-const express = require('express');
+const express = require('express';
 const bodyParser = require('body-parser');
-const axios = require('axios');
+const axios = require('axios';
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -22,10 +22,10 @@ const client = new Twilio(accountSid, authToken);
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const documentaiClient = new DocumentProcessorServiceClient({ credentials: creds });
 
-// CONFIGURACIÓN CORREGIDA SEGÚN TU PROYECTO
-const PROJECT_ID = 'arcangel-1';  // <-- ID exacto de tu proyecto
-const LOCATION = 'us';            // <-- Cambia a 'eu' si creaste el processor en Europa
-const PROCESSOR_ID = '6382e345a7c644fb';  // <-- ID correcto del processor
+// CONFIGURACIÓN FINAL CORRECTA
+const PROJECT_ID = 'arcangel-1';
+const LOCATION = 'us';
+const PROCESSOR_ID = '6382e345a7c644fb';  // ID correcto de tu captura
 
 // Google Sheets
 const authSheets = new google.auth.GoogleAuth({
@@ -86,13 +86,13 @@ async function extraerDatosDocumentAI(filePath) {
     let referencia = 'N/A';
 
     for (const entity of document.entities || []) {
-      if (entity.type === 'amount' || entity.type === 'total_amount' || entity.type === 'total') {
+      if (entity.type.includes('amount') || entity.type.includes('total')) {
         monto = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
-      if (entity.type === 'date' || entity.type === 'transaction_date') {
+      if (entity.type.includes('date')) {
         fecha = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
-      if (entity.type === 'reference' || entity.type === 'transaction_id' || entity.type === 'reference_number') {
+      if (entity.type.includes('reference') || entity.type.includes('id') || entity.type.includes('transaction')) {
         referencia = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
     }
@@ -105,7 +105,7 @@ async function extraerDatosDocumentAI(filePath) {
   }
 }
 
-// Generar recibo elegante y enviar
+// Generar recibo y enviar
 async function generarReciboYEnviar(telefono, filePath, datos) {
   try {
     const fecha = new Date();
