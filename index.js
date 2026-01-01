@@ -1,6 +1,6 @@
-// index.js - Arcangel 1.5 (versión definitiva para Render Free - diciembre 2025)
+// index.js - Arcangel 1.5 (versión definitiva para Render - enero 2026)
 
-require('dotenv').config(); // Solo para pruebas locales, Render ignora esto
+require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -13,12 +13,12 @@ const Twilio = require('twilio');
 const vision = require('@google-cloud/vision');
 const { google } = require('googleapis');
 
-// Configuración Twilio
+// Twilio
 const accountSid = process.env.TWILIO_SID;
 const authToken = process.env.TWILIO_AUTH;
 const client = new Twilio(accountSid, authToken);
 
-// Configuración Google
+// Google
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const visionClient = new vision.ImageAnnotatorClient({ credentials: creds });
 
@@ -29,7 +29,7 @@ const authSheets = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: 'v4', auth: authSheets });
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
 
-// Carpetas temporales (Render usa /tmp)
+// Carpetas temporales
 const UPLOADS_DIR = path.join('/tmp', 'uploads');
 const RECIBOS_DIR = path.join('/tmp', 'recibos');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -42,7 +42,7 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Descargar imagen del comprobante
+// Descargar imagen
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -60,7 +60,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// OCR con Google Vision
+// OCR
 async function extraerTextoOCR(filePath) {
   try {
     const [result] = await visionClient.textDetection(filePath);
@@ -71,7 +71,7 @@ async function extraerTextoOCR(filePath) {
   }
 }
 
-// Generar recibo PNG y enviar por WhatsApp + registrar en Sheets
+// Generar recibo y enviar
 async function generarReciboYEnviar(telefono, filePath, textoOCR) {
   let browser = null;
   try {
@@ -115,19 +115,16 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
     </html>
     `;
 
-    // Lanzamiento con chrome-headless-shell (ligero y perfecto para Render Free)
+    // Lanzamiento con chrome-headless-shell (ligero y compatible con Render)
     browser = await puppeteer.launch({
-      headless: 'shell',  // Clave: modo ligero, sin problemas de cache ni memoria
+      headless: 'shell',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
-        '--single-process',
-        '--disable-background-timer-throttling',
-        '--disable-renderer-backgrounding',
-        '--disable-features=AudioServiceOutOfProcess'
+        '--single-process'
       ]
     });
 
@@ -137,7 +134,7 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
     await browser.close();
     browser = null;
 
-    // Enviar recibo por WhatsApp
+    // Enviar recibo
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
@@ -145,32 +142,25 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
       body: 'Gracias por tu pago. Adjuntamos tu recibo de confirmación.',
       mediaUrl: [mediaUrl]
     });
-    console.log('Recibo enviado correctamente a:', telefono);
+    console.log('Recibo enviado a:', telefono);
 
-    // Registrar en Google Sheets
+    // Registrar en Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'A:D',
       valueInputOption: 'USER_ENTERED',
       resource: { values: [[idOperacion, telefono, fecha.toLocaleString('es-VE'), comprobanteUrl]] }
     });
-    console.log('Registrado en Google Sheets:', idOperacion);
+    console.log('Registrado en Sheets:', idOperacion);
 
   } catch (error) {
     console.error('Error generando/enviando recibo:', error.message);
-    console.error('Stack:', error.stack);
   } finally {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        console.error('Error cerrando browser:', e.message);
-      }
-    }
+    if (browser) await browser.close().catch(() => {});
   }
 }
 
-// Webhook de Twilio
+// Webhook
 app.post('/whatsapp', async (req, res) => {
   try {
     const from = req.body.From?.replace('whatsapp:+', '');
@@ -178,20 +168,17 @@ app.post('/whatsapp', async (req, res) => {
 
     if (numMedia > 0 && req.body.MediaUrl0) {
       await descargarImagen(req.body.MediaUrl0, from);
-    } else {
-      console.log('Mensaje recibido sin imagen de:', from);
     }
 
     res.send('<Response></Response>');
   } catch (error) {
-    console.error('Error en webhook:', error.message);
+    console.error('Error webhook:', error.message);
     res.status(500).send('Error');
   }
 });
 
-// Iniciar servidor
+// Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
-  console.log(`Webhook URL: ${process.env.APP_URL}/whatsapp`);
 });
