@@ -1,4 +1,4 @@
-// index.js - Arcangel 1.5 (con Document AI para extraer monto, fecha, referencia)
+// index.js - Arcangel 1.5 (con Document AI corregido - enero 2026)
 
 require('dotenv').config();
 
@@ -21,9 +21,11 @@ const client = new Twilio(accountSid, authToken);
 // Document AI
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const documentaiClient = new DocumentProcessorServiceClient({ credentials: creds });
-const PROJECT_ID = 'arcangel-1-5'; // Reemplaza si tu project ID es diferente
-const LOCATION = 'us'; // o 'eu'
-const PROCESSOR_ID = '6382e345a7c644fb'; // Pega aquí el ID que copiaste
+
+// CONFIGURACIÓN CORREGIDA SEGÚN TU PROYECTO
+const PROJECT_ID = 'arcangel-1';  // <-- ID exacto de tu proyecto
+const LOCATION = 'us';            // <-- Cambia a 'eu' si creaste el processor en Europa
+const PROCESSOR_ID = '6382e345a7c644fb';  // <-- ID correcto del processor
 
 // Google Sheets
 const authSheets = new google.auth.GoogleAuth({
@@ -84,13 +86,13 @@ async function extraerDatosDocumentAI(filePath) {
     let referencia = 'N/A';
 
     for (const entity of document.entities || []) {
-      if (entity.type === 'amount' || entity.type === 'total_amount') {
+      if (entity.type === 'amount' || entity.type === 'total_amount' || entity.type === 'total') {
         monto = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
       if (entity.type === 'date' || entity.type === 'transaction_date') {
         fecha = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
-      if (entity.type === 'reference' || entity.type === 'transaction_id') {
+      if (entity.type === 'reference' || entity.type === 'transaction_id' || entity.type === 'reference_number') {
         referencia = entity.normalizedValue?.text || entity.mentionText || 'N/A';
       }
     }
@@ -103,7 +105,7 @@ async function extraerDatosDocumentAI(filePath) {
   }
 }
 
-// Generar recibo y enviar
+// Generar recibo elegante y enviar
 async function generarReciboYEnviar(telefono, filePath, datos) {
   try {
     const fecha = new Date();
@@ -111,20 +113,17 @@ async function generarReciboYEnviar(telefono, filePath, datos) {
     const reciboPath = path.join(RECIBOS_DIR, `${telefono}.png`);
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
-    // Canvas para recibo elegante
     const width = 600;
     const height = 900;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo y borde
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Título
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
@@ -138,7 +137,6 @@ async function generarReciboYEnviar(telefono, filePath, datos) {
     ctx.font = 'bold 24px Arial';
     ctx.fillText('● PAGO RECIBIDO ●', width / 2, 200);
 
-    // Línea
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -146,7 +144,6 @@ async function generarReciboYEnviar(telefono, filePath, datos) {
     ctx.lineTo(width - 80, 230);
     ctx.stroke();
 
-    // Datos extraídos
     ctx.fillStyle = '#1f2937';
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
@@ -164,17 +161,14 @@ async function generarReciboYEnviar(telefono, filePath, datos) {
     ctx.fillText(`Referencia: ${datos.referencia}`, 80, y);
     y += 100;
 
-    // Mensaje confianza
     ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
     ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
 
-    // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar recibo
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
@@ -184,7 +178,6 @@ async function generarReciboYEnviar(telefono, filePath, datos) {
     });
     console.log('Recibo enviado a:', telefono);
 
-    // Registrar en Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'A:D',
@@ -228,4 +221,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
 });
-
