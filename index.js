@@ -1,10 +1,10 @@
-// index.js - Arcangel 1.5 (Document AI funcionando - enero 2026)
+// index.js - Arcangel 1.5 (versión final sin errores de sintaxis - enero 2026)
 
 require('dotenv').config();
 
-const express = require('express';
+const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios';
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
@@ -22,7 +22,6 @@ const client = new Twilio(accountSid, authToken);
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const documentaiClient = new DocumentProcessorServiceClient({ credentials: creds });
 
-// CONFIGURACIÓN FINAL CORRECTA
 const PROJECT_ID = 'arcangel-1';
 const LOCATION = 'us';
 const PROCESSOR_ID = '6382e345a7c644fb';  // ID correcto de tu captura
