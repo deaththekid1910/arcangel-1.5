@@ -1,11 +1,12 @@
 {
   "name": "arcangel-1.5",
   "version": "1.0.0",
-  "description": "Automatización WhatsApp Arcangel Funeraria 1.5",
+  "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "./render-build.sh",
     "start": "node index.js",
-    "build": "./render-build.sh"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
