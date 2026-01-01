@@ -66,6 +66,7 @@ async function descargarImagen(mediaUrl, telefono) {
 }
 
 // Extracción con Document AI
+// Extracción con Document AI (mejorada para recibos bancarios)
 async function extraerDatosDocumentAI(filePath) {
   try {
     const name = `projects/${PROJECT_ID}/locations/${LOCATION}/processors/${PROCESSOR_ID}`;
@@ -83,24 +84,48 @@ async function extraerDatosDocumentAI(filePath) {
     let monto = 'N/A';
     let fecha = 'N/A';
     let referencia = 'N/A';
+    let banco = 'N/A';
 
+    // Recorremos todas las entidades y priorizamos los tipos más comunes en comprobantes bancarios
     for (const entity of document.entities || []) {
-      if (entity.type.includes('amount') || entity.type.includes('total')) {
-        monto = entity.normalizedValue?.text || entity.mentionText || 'N/A';
+      const type = entity.type?.toLowerCase() || '';
+      const text = entity.normalizedValue?.text || entity.mentionText || 'N/A';
+
+      // Monto (priorizamos total, amount, line_amount, etc.)
+      if (type.includes('amount') || type.includes('total') || type.includes('line_amount') || type.includes('price')) {
+        monto = text;
       }
-      if (entity.type.includes('date')) {
-        fecha = entity.normalizedValue?.text || entity.mentionText || 'N/A';
+
+      // Fecha (date, transaction_date, due_date)
+      if (type.includes('date') || type.includes('transaction_date') || type.includes('due_date')) {
+        fecha = text;
       }
-      if (entity.type.includes('reference') || entity.type.includes('id') || entity.type.includes('transaction')) {
-        referencia = entity.normalizedValue?.text || entity.mentionText || 'N/A';
+
+      // Referencia (reference, transaction_id, invoice_id, payment_id)
+      if (type.includes('reference') || type.includes('transaction_id') || type.includes('invoice_id') || type.includes('payment_id') || type.includes('id')) {
+        referencia = text;
+      }
+
+      // Banco (supplier_name, payer_name, receiver_name)
+      if (type.includes('supplier') || type.includes('receiver') || type.includes('payer')) {
+        banco = text;
       }
     }
 
-    console.log('Datos extraídos:', { monto, fecha, referencia });
-    return { monto, fecha, referencia };
+    // Fallback: si monto es N/A, buscamos en el texto completo números grandes
+    if (monto === 'N/A') {
+      const fullText = document.text || '';
+      const montoMatch = fullText.match(/[\d.,]{5,}/g); // Busca números grandes (ej. 500.00, 1,000.00)
+      if (montoMatch) {
+        monto = montoMatch[0].replace(/,/g, '.');
+      }
+    }
+
+    console.log('Datos extraídos (mejorados):', { monto, fecha, referencia, banco });
+    return { monto, fecha, referencia, banco };
   } catch (error) {
     console.error('Error en Document AI:', error.message);
-    return { monto: 'N/A', fecha: 'N/A', referencia: 'N/A' };
+    return { monto: 'N/A', fecha: 'N/A', referencia: 'N/A', banco: 'N/A' };
   }
 }
 
@@ -220,4 +245,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
 });
+
 
