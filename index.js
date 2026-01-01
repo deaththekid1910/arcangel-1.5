@@ -1,4 +1,4 @@
-// index.js - Arcangel 1.5 (versión optimizada para Render)
+// index.js - Arcangel 1.5 (versión final optimizada para Render - diciembre 2025)
 
 require('dotenv').config(); // Solo para pruebas locales, Render ignora esto
 
@@ -56,7 +56,7 @@ async function descargarImagen(mediaUrl, telefono) {
     const textoOCR = await extraerTextoOCR(filePath);
     await generarReciboYEnviar(telefono, filePath, textoOCR);
   } catch (error) {
-    console.error('Error descargando:', error.message);
+    console.error('Error descargando imagen:', error.message);
   }
 }
 
@@ -66,13 +66,14 @@ async function extraerTextoOCR(filePath) {
     const [result] = await visionClient.textDetection(filePath);
     return result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
   } catch (error) {
-    console.error('Error OCR:', error.message);
+    console.error('Error en OCR:', error.message);
     return '';
   }
 }
 
 // Generar recibo PNG y enviar por WhatsApp + registrar en Sheets
 async function generarReciboYEnviar(telefono, filePath, textoOCR) {
+  let browser;
   try {
     const fecha = new Date();
     const idOperacion = `ARC-${uuidv4().slice(0, 8).toUpperCase()}`;
@@ -88,7 +89,7 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
         body { background: #f9f9f9; font-family: Arial, sans-serif; padding: 40px; }
         .recibo { background: white; max-width: 600px; margin: auto; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 30px; }
-        h1 { color: #1f3a5f; margin: 0; }
+        h1 { color: #1f3a5f; margin: 0; font-size: 28px; }
         .divider { border-top: 3px solid #1f3a5f; margin: 20px 0; }
         .row { display: flex; justify-content: space-between; margin: 15px 0; font-size: 16px; }
         .footer { text-align: center; margin-top: 40px; font-size: 12px; color: #777; }
@@ -114,14 +115,44 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
     </html>
     `;
 
-    const browser = await puppeteer.launch({
+    // Lanzamiento optimizado de Puppeteer para Render
+    browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-features=AudioServiceOutOfProcess',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-breakpad',
+        '--disable-component-extensions-with-background-pages',
+        '--disable-ipc-flooding-protection',
+        '--disable-renderer-backgrounding',
+        '--disable-extensions',
+        '--disable-features=TranslateUI',
+        '--disable-hang-monitor',
+        '--disable-prompt-on-repost',
+        '--disable-sync',
+        '--disable-threaded-animation',
+        '--disable-threaded-scrolling',
+        '--force-color-profile=srgb',
+        '--metrics-recording-only',
+        '--safebrowsing-disable-auto-update'
+      ]
     });
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.screenshot({ path: reciboPath, fullPage: true });
     await browser.close();
+    browser = null; // Limpiar referencia
 
     // Enviar recibo por WhatsApp
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
@@ -131,7 +162,7 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
       body: 'Gracias por tu pago. Adjuntamos tu recibo de confirmación.',
       mediaUrl: [mediaUrl]
     });
-    console.log('Recibo enviado a:', telefono);
+    console.log('Recibo enviado correctamente a:', telefono);
 
     // Registrar en Google Sheets
     await sheets.spreadsheets.values.append({
@@ -140,10 +171,19 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
       valueInputOption: 'USER_ENTERED',
       resource: { values: [[idOperacion, telefono, fecha.toLocaleString('es-VE'), comprobanteUrl]] }
     });
-    console.log('Registrado en Sheets:', idOperacion);
+    console.log('Registrado en Google Sheets:', idOperacion);
 
   } catch (error) {
     console.error('Error generando/enviando recibo:', error.message);
+    console.error('Stack:', error.stack);
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (e) {
+        console.error('Error cerrando browser:', e.message);
+      }
+    }
   }
 }
 
@@ -155,8 +195,11 @@ app.post('/whatsapp', async (req, res) => {
 
     if (numMedia > 0 && req.body.MediaUrl0) {
       await descargarImagen(req.body.MediaUrl0, from);
+    } else {
+      console.log('Mensaje recibido sin imagen de:', from);
     }
 
+    // Respuesta TwiML vacía
     res.send('<Response></Response>');
   } catch (error) {
     console.error('Error en webhook:', error.message);
@@ -168,4 +211,5 @@ app.post('/whatsapp', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
+  console.log(`Webhook URL: ${process.env.APP_URL}/whatsapp`);
 });
