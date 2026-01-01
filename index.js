@@ -1,4 +1,4 @@
-// index.js - Arcangel 1.5 (versión final optimizada para Render - diciembre 2025)
+// index.js - Arcangel 1.5 (versión definitiva para Render Free - diciembre 2025)
 
 require('dotenv').config(); // Solo para pruebas locales, Render ignora esto
 
@@ -73,7 +73,7 @@ async function extraerTextoOCR(filePath) {
 
 // Generar recibo PNG y enviar por WhatsApp + registrar en Sheets
 async function generarReciboYEnviar(telefono, filePath, textoOCR) {
-  let browser;
+  let browser = null;
   try {
     const fecha = new Date();
     const idOperacion = `ARC-${uuidv4().slice(0, 8).toUpperCase()}`;
@@ -115,36 +115,19 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
     </html>
     `;
 
-    // Lanzamiento optimizado de Puppeteer para Render
+    // Lanzamiento con chrome-headless-shell (ligero y perfecto para Render Free)
     browser = await puppeteer.launch({
-      headless: true,
+      headless: 'shell',  // Clave: modo ligero, sin problemas de cache ni memoria
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
+        '--disable-gpu',
         '--no-zygote',
         '--single-process',
-        '--disable-gpu',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
-        '--disable-features=AudioServiceOutOfProcess',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-breakpad',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-ipc-flooding-protection',
-        '--disable-renderer-backgrounding',
-        '--disable-extensions',
-        '--disable-features=TranslateUI',
-        '--disable-hang-monitor',
-        '--disable-prompt-on-repost',
-        '--disable-sync',
-        '--disable-threaded-animation',
-        '--disable-threaded-scrolling',
-        '--force-color-profile=srgb',
-        '--metrics-recording-only',
-        '--safebrowsing-disable-auto-update'
+        '--disable-features=AudioServiceOutOfProcess'
       ]
     });
 
@@ -152,7 +135,7 @@ async function generarReciboYEnviar(telefono, filePath, textoOCR) {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.screenshot({ path: reciboPath, fullPage: true });
     await browser.close();
-    browser = null; // Limpiar referencia
+    browser = null;
 
     // Enviar recibo por WhatsApp
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
@@ -199,7 +182,6 @@ app.post('/whatsapp', async (req, res) => {
       console.log('Mensaje recibido sin imagen de:', from);
     }
 
-    // Respuesta TwiML vacía
     res.send('<Response></Response>');
   } catch (error) {
     console.error('Error en webhook:', error.message);
