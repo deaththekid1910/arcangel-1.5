@@ -1,9 +1,9 @@
-// index.js - Arcangel 1.5 Final (recibo oficial con logo, RIF, dirección y teléfonos)
+// index.js - Arcangel 1.5 Final (con logo oficial, RIF, dirección y teléfonos)
 
 require('dotenv').config();
 
 const express = require('express');
-const bodyParser = require('body-parser';
+const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
@@ -39,10 +39,10 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Ruta para servir el logo (sube logo.png a tu repositorio)
-app.use('/logo', express.static(path.join(__dirname, '.'))); // Sirve logo.png desde raíz
+// Logo URL (tu imagen subida a GitHub - raw para que cargue)
+const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
-// Descargar imagen
+// Descargar imagen del comprobante
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -69,11 +69,12 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1000; // Más alto para caber todo
+    const height = 1100; // Más alto para caber todo
+
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo
+    // Fondo suave
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
@@ -82,46 +83,47 @@ async function generarReciboYEnviar(telefono) {
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Logo (carga desde /logo.png en tu repositorio)
+    // Cargar y dibujar logo
     try {
-      const logo = await loadImage(`${process.env.APP_URL}/logo.png`);
-      ctx.drawImage(logo, width / 2 - 80, 60, 160, 160); // Centrado arriba
+      const logo = await loadImage(LOGO_URL);
+      const logoSize = 180;
+      ctx.drawImage(logo, width / 2 - logoSize / 2, 60, logoSize, logoSize);
     } catch (e) {
-      console.log('Logo no encontrado, se omite');
+      console.log('Error cargando logo, se omite:', e.message);
     }
 
     // Check grande
     ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('✓', width / 2, 280);
+    ctx.fillText('✓', width / 2, 300);
 
     ctx.fillStyle = '#15803d';
     ctx.font = 'bold 32px Arial';
-    ctx.fillText('PAGO RECIBIDO', width / 2, 340);
+    ctx.fillText('PAGO RECIBIDO', width / 2, 360);
 
     // Título
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
-    ctx.fillText('Arcángel Funeraria', width / 2, 420);
+    ctx.fillText('Arcángel Funeraria', width / 2, 440);
 
     ctx.fillStyle = '#1e40af';
     ctx.font = 'italic 24px Arial';
-    ctx.fillText('Comprobante de Recepción', width / 2, 470);
+    ctx.fillText('Comprobante de Recepción', width / 2, 490);
 
     // Línea dorada
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(80, 510);
-    ctx.lineTo(width - 80, 510);
+    ctx.moveTo(80, 530);
+    ctx.lineTo(width - 80, 530);
     ctx.stroke();
 
     // Datos personalizados
     ctx.fillStyle = '#1f2937';
     ctx.font = '22px Arial';
     ctx.textAlign = 'left';
-    let y = 570;
+    let y = 590;
     ctx.fillText(`Cliente: ${telefono}`, 80, y);
     y += 60;
     ctx.fillText(`Hora de recepción: ${horaRecepción}`, 80, y);
@@ -142,20 +144,20 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText('Estamos validando tu comprobante', width / 2, y);
     y += 50;
     ctx.fillText('y en minutos te confirmaremos.', width / 2, y);
-    y += 100;
+    y += 120;
 
     // Información oficial
     ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 18px Arial';
+    ctx.font = 'bold 20px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
-    y += 40;
+    y += 50;
     ctx.font = '18px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Dirección: Av. Urdaneta C/C Calle Arvelo Nº 81-6', width / 2, y);
-    y += 35;
+    y += 40;
     ctx.fillText('Frente a la Plaza Santa Rosa, Valencia', width / 2, y);
-    y += 50;
-    ctx.font = 'bold 18px Arial';
+    y += 60;
+    ctx.font = 'bold 20px Arial';
     ctx.fillText('Telf. 0241-8353240 / 0414-4715376', width / 2, y);
 
     // Guardar PNG
