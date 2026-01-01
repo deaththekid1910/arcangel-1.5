@@ -21,7 +21,7 @@ const client = new Twilio(accountSid, authToken);
 // Document AI
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 const documentaiClient = new DocumentProcessorServiceClient({ credentials: creds });
-const PROJECT_ID = 'Prueba1-5'; // Reemplaza si tu project ID es diferente
+const PROJECT_ID = 'arcangel-1-5'; // Reemplaza si tu project ID es diferente
 const LOCATION = 'us'; // o 'eu'
 const PROCESSOR_ID = '6382e345a7c644fb'; // Pega aquí el ID que copiaste
 
@@ -228,3 +228,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
 });
+
