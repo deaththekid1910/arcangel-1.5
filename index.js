@@ -1,4 +1,4 @@
-// index.js - Arcangel 1.5 Final (con logo oficial, RIF, dirección y teléfonos)
+// index.js - Arcangel 1.5 Final (fecha/hora Venezuela + ID en mensaje de texto)
 
 require('dotenv').config();
 
@@ -39,7 +39,7 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Logo URL (tu imagen subida a GitHub - raw para que cargue)
+// Logo URL (tu imagen subida a GitHub raw)
 const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
 // Descargar imagen del comprobante
@@ -59,37 +59,40 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial con logo, RIF, dirección y teléfonos
+// Generar recibo oficial con fecha/hora Venezuela y ID en mensaje
 async function generarReciboYEnviar(telefono) {
   try {
-    const fecha = new Date();
-    const horaRecepción = fecha.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    // Fecha y hora actual en Venezuela (UTC-4)
+    const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
+    const horaRecepción = fechaVenezuela.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+    const fechaRecepción = fechaVenezuela.toLocaleDateString('es-VE');
+    const fechaCompleta = fechaVenezuela.toLocaleString('es-VE');
+
     const idOperacion = `ARC-${uuidv4().slice(0, 8).toUpperCase()}`;
     const reciboPath = path.join(RECIBOS_DIR, `${telefono}.png`);
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1100; // Más alto para caber todo
-
+    const height = 1100;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo suave
+    // Fondo
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde elegante
+    // Borde
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Cargar y dibujar logo
+    // Logo
     try {
       const logo = await loadImage(LOGO_URL);
       const logoSize = 180;
       ctx.drawImage(logo, width / 2 - logoSize / 2, 60, logoSize, logoSize);
     } catch (e) {
-      console.log('Error cargando logo, se omite:', e.message);
+      console.log('Error cargando logo:', e.message);
     }
 
     // Check grande
@@ -128,7 +131,7 @@ async function generarReciboYEnviar(telefono) {
     y += 60;
     ctx.fillText(`Hora de recepción: ${horaRecepción}`, 80, y);
     y += 60;
-    ctx.fillText(`Fecha: ${fecha.toLocaleDateString('es-VE')}`, 80, y);
+    ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
     y += 100;
@@ -164,12 +167,12 @@ async function generarReciboYEnviar(telefono) {
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp
+    // Enviar por WhatsApp (con ID de operación para que lo copie)
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
       to: `whatsapp:+${telefono}`,
-      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción}.\n\nEstamos validándolo y en minutos te confirmaremos.\n\nGracias por confiar en nosotros.`,
+      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\nEstamos validándolo y en minutos te confirmaremos.\n\nGracias por confiar en nosotros.`,
       mediaUrl: [mediaUrl]
     });
     console.log('Recibo oficial enviado a:', telefono);
@@ -180,7 +183,7 @@ async function generarReciboYEnviar(telefono) {
       range: 'A:D',
       valueInputOption: 'USER_ENTERED',
       resource: {
-        values: [[idOperacion, telefono, fecha.toLocaleString('es-VE'), comprobanteUrl]]
+        values: [[idOperacion, telefono, fechaCompleta, comprobanteUrl]]
       }
     });
     console.log('Registrado en Sheets:', idOperacion);
