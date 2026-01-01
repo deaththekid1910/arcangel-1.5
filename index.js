@@ -1,16 +1,16 @@
-// index.js - Arcangel 1.5 Final (sin Document AI - recibo elegante con check)
+// index.js - Arcangel 1.5 Final (recibo oficial con logo, RIF, dirección y teléfonos)
 
 require('dotenv').config();
 
 const express = require('express');
-const bodyParser = require('body-parser');
+const bodyParser = require('body-parser';
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const Twilio = require('twilio');
 const { google } = require('googleapis');
-const { createCanvas } = require('canvas');
+const { createCanvas, loadImage } = require('canvas');
 
 // Twilio
 const accountSid = process.env.TWILIO_SID;
@@ -39,7 +39,10 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Descargar imagen y generar recibo
+// Ruta para servir el logo (sube logo.png a tu repositorio)
+app.use('/logo', express.static(path.join(__dirname, '.'))); // Sirve logo.png desde raíz
+
+// Descargar imagen
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -56,7 +59,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo elegante (Opción 2 con check)
+// Generar recibo oficial con logo, RIF, dirección y teléfonos
 async function generarReciboYEnviar(telefono) {
   try {
     const fecha = new Date();
@@ -65,13 +68,12 @@ async function generarReciboYEnviar(telefono) {
     const reciboPath = path.join(RECIBOS_DIR, `${telefono}.png`);
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
-    // Canvas - Recibo elegante con check
     const width = 600;
-    const height = 900;
+    const height = 1000; // Más alto para caber todo
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo suave
+    // Fondo
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
@@ -80,38 +82,46 @@ async function generarReciboYEnviar(telefono) {
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Icono check grande y verde
+    // Logo (carga desde /logo.png en tu repositorio)
+    try {
+      const logo = await loadImage(`${process.env.APP_URL}/logo.png`);
+      ctx.drawImage(logo, width / 2 - 80, 60, 160, 160); // Centrado arriba
+    } catch (e) {
+      console.log('Logo no encontrado, se omite');
+    }
+
+    // Check grande
     ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('✓', width / 2, 180);
+    ctx.fillText('✓', width / 2, 280);
 
     ctx.fillStyle = '#15803d';
     ctx.font = 'bold 32px Arial';
-    ctx.fillText('PAGO RECIBIDO', width / 2, 240);
+    ctx.fillText('PAGO RECIBIDO', width / 2, 340);
 
     // Título
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
-    ctx.fillText('Arcángel Funeraria', width / 2, 320);
+    ctx.fillText('Arcángel Funeraria', width / 2, 420);
 
     ctx.fillStyle = '#1e40af';
     ctx.font = 'italic 24px Arial';
-    ctx.fillText('Comprobante de Recepción', width / 2, 370);
+    ctx.fillText('Comprobante de Recepción', width / 2, 470);
 
     // Línea dorada
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(80, 410);
-    ctx.lineTo(width - 80, 410);
+    ctx.moveTo(80, 510);
+    ctx.lineTo(width - 80, 510);
     ctx.stroke();
 
     // Datos personalizados
     ctx.fillStyle = '#1f2937';
     ctx.font = '22px Arial';
     ctx.textAlign = 'left';
-    let y = 480;
+    let y = 570;
     ctx.fillText(`Cliente: ${telefono}`, 80, y);
     y += 60;
     ctx.fillText(`Hora de recepción: ${horaRecepción}`, 80, y);
@@ -134,10 +144,19 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText('y en minutos te confirmaremos.', width / 2, y);
     y += 100;
 
-    // Footer
-    ctx.fillStyle = '#6b7280';
+    // Información oficial
+    ctx.fillStyle = '#1e3a8a';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('RIF: J-40472273', width / 2, y);
+    y += 40;
     ctx.font = '18px Arial';
-    ctx.fillText('Gracias por confiar en Arcángel Funeraria', width / 2, y);
+    ctx.fillStyle = '#374151';
+    ctx.fillText('Dirección: Av. Urdaneta C/C Calle Arvelo Nº 81-6', width / 2, y);
+    y += 35;
+    ctx.fillText('Frente a la Plaza Santa Rosa, Valencia', width / 2, y);
+    y += 50;
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Telf. 0241-8353240 / 0414-4715376', width / 2, y);
 
     // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
@@ -151,7 +170,7 @@ async function generarReciboYEnviar(telefono) {
       body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción}.\n\nEstamos validándolo y en minutos te confirmaremos.\n\nGracias por confiar en nosotros.`,
       mediaUrl: [mediaUrl]
     });
-    console.log('Recibo enviado a:', telefono);
+    console.log('Recibo oficial enviado a:', telefono);
 
     // Registrar en Sheets
     await sheets.spreadsheets.values.append({
@@ -181,7 +200,7 @@ app.post('/whatsapp', async (req, res) => {
       await client.messages.create({
         from: 'whatsapp:+14155238886',
         to: `whatsapp:+${from}`,
-        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante automático.'
+        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante oficial.'
       });
     }
 
@@ -195,5 +214,5 @@ app.post('/whatsapp', async (req, res) => {
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Arcangel 1.5 Final corriendo en puerto ${PORT}`);
+  console.log(`Arcangel 1.5 Oficial corriendo en puerto ${PORT}`);
 });
