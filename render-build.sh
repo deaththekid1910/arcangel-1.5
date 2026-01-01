@@ -1,10 +1,20 @@
 #!/usr/bin/env bash
 set -o errexit
 
-echo "Instalando dependencias..."
+echo "=== Iniciando build para Puppeteer en Render ==="
+
+# Instalamos dependencias
 npm install
 
-echo "Instalando chrome-headless-shell..."
+# Aseguramos directorio de cache persistente
+PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer
+mkdir -p $PUPPETEER_CACHE_DIR
+
+# Instalamos chrome-headless-shell (ligero y compatible)
 npx @puppeteer/browsers install chrome-headless-shell@stable
 
-echo "Listo: chrome-headless-shell instalado"
+# Copiamos a cache persistente
+echo "...Cacheando chrome-headless-shell"
+cp -R ~/.cache/puppeteer/chrome-headless-shell/* $PUPPETEER_CACHE_DIR/
+
+echo "=== Build completado: chrome-headless-shell listo ==="
