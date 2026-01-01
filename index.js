@@ -24,7 +24,7 @@ const documentaiClient = new DocumentProcessorServiceClient({ credentials: creds
 
 const PROJECT_ID = 'arcangel-1';
 const LOCATION = 'us';
-const PROCESSOR_ID = '6382e345a7c644fb';  // ID correcto de tu captura
+const PROCESSOR_ID = 'a62e20e569e23ae2';  // ID correcto de tu captura
 
 // Google Sheets
 const authSheets = new google.auth.GoogleAuth({
@@ -220,3 +220,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
 });
+
