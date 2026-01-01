@@ -1,17 +1,16 @@
-// index.js - Arcangel 1.5 (recibo elegante y profesional con canvas)
+// index.js - Arcangel 1.5 (registro correcto en tu hoja + recibo elegante)
 
 require('dotenv').config();
 
-const express = require('express');
-const bodyParser = require('body-parser';
+const express = require('express';
+const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const Twilio = require('twilio');
-const vision = require('@google-cloud/vision');
 const { google } = require('googleapis');
-const { createCanvas, loadImage } = require('canvas');
+const { createCanvas } = require('canvas');
 
 // Twilio
 const accountSid = process.env.TWILIO_SID;
@@ -20,8 +19,6 @@ const client = new Twilio(accountSid, authToken);
 
 // Google
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
-const visionClient = new vision.ImageAnnotatorClient({ credentials: creds });
-
 const authSheets = new google.auth.GoogleAuth({
   credentials: creds,
   scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -42,7 +39,7 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Descargar imagen
+// Descargar imagen y procesar
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -53,27 +50,27 @@ async function descargarImagen(mediaUrl, telefono) {
     fs.writeFileSync(filePath, response.data);
     console.log('Comprobante guardado:', filePath);
 
-    await generarReciboYEnviar(telefono);
+    await generarReciboYEnviar(telefono, filePath);
   } catch (error) {
     console.error('Error descargando:', error.message);
   }
 }
 
-// Generar recibo elegante con canvas
-async function generarReciboYEnviar(telefono) {
+// Generar recibo elegante y registrar en Sheets
+async function generarReciboYEnviar(telefono, filePath) {
   try {
     const fecha = new Date();
     const idOperacion = `ARC-${uuidv4().slice(0, 8).toUpperCase()}`;
     const reciboPath = path.join(RECIBOS_DIR, `${telefono}.png`);
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
-    // Tamaño del recibo (formato vertical elegante)
+    // === Generación del recibo elegante con canvas ===
     const width = 600;
     const height = 900;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo suave
+    // Fondo
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
@@ -82,7 +79,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Título principal
+    // Título
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
     ctx.textAlign = 'center';
@@ -92,12 +89,11 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'italic 22px Arial';
     ctx.fillText('Comprobante de Recepción de Pago', width / 2, 140);
 
-    // Sello de confianza
     ctx.fillStyle = '#dc2626';
     ctx.font = 'bold 24px Arial';
     ctx.fillText('● PAGO RECIBIDO ●', width / 2, 200);
 
-    // Línea divisoria dorada
+    // Línea dorada
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -105,68 +101,68 @@ async function generarReciboYEnviar(telefono) {
     ctx.lineTo(width - 80, 230);
     ctx.stroke();
 
-    // Datos del pago
+    // Datos
     ctx.fillStyle = '#1f2937';
     ctx.font = '20px Arial';
     ctx.textAlign = 'left';
-    const lineHeight = 50;
     let y = 280;
-
-    ctx.fillText(`Nº de Referencia: ${idOperacion}`, 80, y);
-    y += lineHeight;
-    ctx.fillText(`Teléfono Cliente: ${telefono}`, 80, y);
-    y += lineHeight;
-    ctx.fillText(`Fecha y Hora: ${fecha.toLocaleString('es-VE')}`, 80, y);
-    y += lineHeight * 1.5;
+    ctx.fillText(`Nº Referencia: ${idOperacion}`, 80, y);
+    y += 60;
+    ctx.fillText(`Cliente: ${telefono}`, 80, y);
+    y += 60;
+    ctx.fillText(`Fecha: ${fecha.toLocaleString('es-VE')}`, 80, y);
+    y += 100;
 
     // Mensaje de confianza
     ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
     ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
-    y += lineHeight;
+    y += 50;
     ctx.font = '18px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += lineHeight;
-    ctx.fillText('En breve te confirmaremos el procesamiento.', width / 2, y);
-    y += lineHeight * 1.5;
+    y += 50;
+    ctx.fillText('En breve te confirmaremos.', width / 2, y);
+    y += 100;
 
-    // Footer profesional
+    // Footer
     ctx.fillStyle = '#6b7280';
     ctx.font = '16px Arial';
     ctx.fillText('Gracias por confiar en Arcángel Funeraria', width / 2, y);
-    y += 40;
-    ctx.font = '14px Arial';
-    ctx.fillText('Este es un comprobante automático de recepción.', width / 2, y);
-    y += 30;
-    ctx.fillText('Para cualquier consulta: +58 XXX-XXX-XXXX', width / 2, y);
 
-    // Guardar imagen
+    // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp
+    // Enviar recibo
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
       to: `whatsapp:+${telefono}`,
-      body: '¡Gracias por tu pago!\n\nTe adjuntamos tu comprobante oficial de recepción.\nEstamos validando tu transferencia y en minutos te confirmaremos.',
+      body: '¡Gracias por tu pago!\n\nTe adjuntamos tu comprobante oficial de recepción.\nEstamos validando tu transferencia.',
       mediaUrl: [mediaUrl]
     });
-    console.log('Recibo elegante enviado a:', telefono);
+    console.log('Recibo enviado a:', telefono);
 
-    // Registrar en Sheets
+    // === Registro en tu hoja exacta (A:D) ===
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'A:D',
+      range: 'A:D',  // Columnas A, B, C, D
       valueInputOption: 'USER_ENTERED',
-      resource: { values: [[idOperacion, telefono, fecha.toLocaleString('es-VE'), comprobanteUrl]] }
+      resource: {
+        values: [[
+          idOperacion,              // A: id
+          telefono,                 // B: numero cliente
+          fecha.toLocaleString('es-VE'),  // C: fecha de respuesta
+          comprobanteUrl            // D: comprobante de pago
+        ]]
+      }
     });
-    console.log('Registrado en Sheets:', idOperacion);
+    console.log('Registrado correctamente en Sheets:', idOperacion);
 
   } catch (error) {
-    console.error('Error generando/enviando recibo elegante:', error.message);
+    console.error('Error generando/enviando o registrando:', error.message);
   }
 }
 
@@ -182,7 +178,7 @@ app.post('/whatsapp', async (req, res) => {
       await client.messages.create({
         from: 'whatsapp:+14155238886',
         to: `whatsapp:+${from}`,
-        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante automático.'
+        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante.'
       });
     }
 
@@ -196,5 +192,5 @@ app.post('/whatsapp', async (req, res) => {
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Arcangel 1.5 (recibo elegante) corriendo en puerto ${PORT}`);
+  console.log(`Arcangel 1.5 corriendo en puerto ${PORT}`);
 });
