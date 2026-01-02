@@ -1,8 +1,8 @@
-// index.js - Grupo Exequial Arcángel C.A. (mensaje de validación más arriba)
+// index.js - Grupo Exequial Arcángel C.A. (versión final definitiva)
 
 require('dotenv').config();
 
-const express = require('express';
+const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
@@ -79,7 +79,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (mensaje de validación más arriba)
+// Generar recibo oficial
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -160,7 +160,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
     y += 100;
 
-    // Mensaje de confianza (subido más arriba)
+    // Mensaje de confianza (más arriba y destacado)
     ctx.font = 'bold 28px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
