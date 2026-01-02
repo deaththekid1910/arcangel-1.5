@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (final - sin dirección/teléfonos + anti-duplicados)
+// index.js - Grupo Exequial Arcángel C.A. (final - solo RIF en footer + anti-duplicados)
 
 require('dotenv').config();
 
@@ -43,7 +43,7 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // Logo URL
 const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
-// Set para almacenar hashes de imágenes procesadas (anti-duplicados)
+// Set para hashes de imágenes procesadas (anti-duplicados)
 const processedHashes = new Set();
 
 // Descargar imagen del comprobante
@@ -57,7 +57,7 @@ async function descargarImagen(mediaUrl, telefono) {
     fs.writeFileSync(filePath, response.data);
     console.log('Comprobante guardado:', filePath);
 
-    // Calcular hash de la imagen para detectar duplicados
+    // Hash para detectar duplicados
     const imageBuffer = response.data;
     const hash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
 
@@ -68,10 +68,9 @@ async function descargarImagen(mediaUrl, telefono) {
         to: `whatsapp:+${telefono}`,
         body: 'Ya recibimos y procesamos tu comprobante de pago anteriormente.\n\nSi necesitas asistencia adicional, escríbenos.\n\nGracias por confiar en Grupo Exequial Arcángel C.A.'
       });
-      return; // No genera nuevo recibo
+      return;
     }
 
-    // Si no es duplicado, agrega el hash y procesa
     processedHashes.add(hash);
 
     await generarReciboYEnviar(telefono);
@@ -80,10 +79,10 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (sin dirección ni teléfonos)
+// Generar recibo oficial (solo RIF en footer)
 async function generarReciboYEnviar(telefono) {
   try {
-    // Fecha y hora actual en Venezuela
+    // Fecha y hora Venezuela
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
     const horaRecepción = fechaVenezuela.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
     const fechaRecepción = fechaVenezuela.toLocaleDateString('es-VE');
@@ -102,7 +101,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde elegante
+    // Borde
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
@@ -116,7 +115,7 @@ async function generarReciboYEnviar(telefono) {
       console.log('Error cargando logo:', e.message);
     }
 
-    // Check grande
+    // Check
     ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
@@ -166,11 +165,11 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += 120;
+    y += 100;
 
-    // Solo RIF (sin dirección ni teléfonos)
+    // Solo RIF (bien visible y dentro del marco)
     ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 20px Arial';
+    ctx.font = 'bold 22px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
 
     // Guardar PNG
