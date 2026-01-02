@@ -1,11 +1,11 @@
-// index.js - Arcangel 1.5 Final (versión oficial Grupo Exequial Arcángel C.A.)
+// index.js - Arcangel 1.5 Final (dirección y teléfonos dentro del marco azul)
 
 require('dotenv').config();
 
-const express = require('express');
+const express = require('express';
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const fs = require('fs');
+const fs = require('fs';
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const Twilio = require('twilio');
@@ -39,7 +39,7 @@ app.use(bodyParser.json());
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
-// Logo URL (tu imagen subida a GitHub raw)
+// Logo URL
 const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
 // Descargar imagen del comprobante
@@ -59,10 +59,10 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (actualizado)
+// Generar recibo oficial (dirección y teléfonos dentro del marco)
 async function generarReciboYEnviar(telefono) {
   try {
-    // Fecha y hora actual en Venezuela (UTC-4)
+    // Fecha y hora actual en Venezuela
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
     const horaRecepción = fechaVenezuela.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
     const fechaRecepción = fechaVenezuela.toLocaleDateString('es-VE');
@@ -73,7 +73,7 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1100;
+    const height = 1150; // Aumentado para dar más espacio al footer
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -105,7 +105,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'bold 32px Arial';
     ctx.fillText('PAGO RECIBIDO', width / 2, 360);
 
-    // Título actualizado
+    // Título
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
     ctx.fillText('Grupo Exequial Arcángel C.A.', width / 2, 440);
@@ -134,9 +134,9 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 100;
+    y += 120;
 
-    // Mensaje de confianza simplificado
+    // Mensaje de confianza
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
@@ -145,9 +145,9 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += 120;
+    y += 140;
 
-    // Información oficial
+    // Información oficial (dentro del marco azul)
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 20px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
@@ -165,7 +165,7 @@ async function generarReciboYEnviar(telefono) {
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp (mensaje simplificado)
+    // Enviar por WhatsApp
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
