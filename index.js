@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (final - solo RIF en footer + anti-duplicados)
+// index.js - Grupo Exequial Arcángel C.A. (RIF debajo del título)
 
 require('dotenv').config();
 
@@ -79,10 +79,10 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (solo RIF en footer)
+// Generar recibo oficial (RIF debajo del título)
 async function generarReciboYEnviar(telefono) {
   try {
-    // Fecha y hora Venezuela
+    // Fecha y hora actual en Venezuela
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
     const horaRecepción = fechaVenezuela.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
     const fechaRecepción = fechaVenezuela.toLocaleDateString('es-VE');
@@ -101,7 +101,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde
+    // Borde elegante
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
@@ -115,7 +115,7 @@ async function generarReciboYEnviar(telefono) {
       console.log('Error cargando logo:', e.message);
     }
 
-    // Check
+    // Check grande
     ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
@@ -125,28 +125,32 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'bold 32px Arial';
     ctx.fillText('PAGO RECIBIDO', width / 2, 360);
 
-    // Título
+    // Título + RIF debajo
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
     ctx.fillText('Grupo Exequial Arcángel C.A.', width / 2, 440);
 
+    ctx.fillStyle = '#1e3a8a';
+    ctx.font = 'bold 20px Arial';
+    ctx.fillText('RIF: J-40472273', width / 2, 480);
+
     ctx.fillStyle = '#1e40af';
     ctx.font = 'italic 24px Arial';
-    ctx.fillText('Comprobante de Recepción', width / 2, 490);
+    ctx.fillText('Comprobante de Recepción', width / 2, 530);
 
     // Línea dorada
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(80, 530);
-    ctx.lineTo(width - 80, 530);
+    ctx.moveTo(80, 570);
+    ctx.lineTo(width - 80, 570);
     ctx.stroke();
 
     // Datos personalizados
     ctx.fillStyle = '#1f2937';
     ctx.font = '22px Arial';
     ctx.textAlign = 'left';
-    let y = 590;
+    let y = 630;
     ctx.fillText(`Cliente: ${telefono}`, 80, y);
     y += 60;
     ctx.fillText(`Hora de recepción: ${horaRecepción}`, 80, y);
@@ -165,12 +169,6 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += 100;
-
-    // Solo RIF (bien visible y dentro del marco)
-    ctx.fillStyle = '#1e3a8a';
-    ctx.font = 'bold 22px Arial';
-    ctx.fillText('RIF: J-40472273', width / 2, y);
 
     // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
