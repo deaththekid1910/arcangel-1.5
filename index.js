@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión final compacta)
+// index.js - Grupo Exequial Arcángel C.A. (versión final - texto abajo pequeño y compacto)
 
 require('dotenv').config();
 
@@ -78,7 +78,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (mensaje compacto)
+// Generar recibo oficial (texto abajo más pequeño y compacto)
 async function generarReciboYEnviar(telefono) {
   try {
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
@@ -149,12 +149,17 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 80;
+    y += 60;
 
-    ctx.font = 'bold 26px Arial';
+    // Mensaje de confianza más pequeño y compacto (en dos líneas para que no desborde)
+    ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
-    ctx.fillText('¡Tu pago ha sido recibido correctamente! Estamos validando tu comprobante.', width / 2, y);
+    ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
+    y += 40;
+    ctx.font = '18px Arial';
+    ctx.fillStyle = '#374151';
+    ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
 
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
