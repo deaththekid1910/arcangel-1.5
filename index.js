@@ -1,4 +1,4 @@
-// index.js - Arcangel 1.5 Final (fecha/hora Venezuela + ID en mensaje de texto)
+// index.js - Arcangel 1.5 Final (versión oficial Grupo Exequial Arcángel C.A.)
 
 require('dotenv').config();
 
@@ -59,7 +59,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial con fecha/hora Venezuela y ID en mensaje
+// Generar recibo oficial (actualizado)
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela (UTC-4)
@@ -81,7 +81,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde
+    // Borde elegante
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
@@ -105,10 +105,10 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'bold 32px Arial';
     ctx.fillText('PAGO RECIBIDO', width / 2, 360);
 
-    // Título
+    // Título actualizado
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
-    ctx.fillText('Arcángel Funeraria', width / 2, 440);
+    ctx.fillText('Grupo Exequial Arcángel C.A.', width / 2, 440);
 
     ctx.fillStyle = '#1e40af';
     ctx.font = 'italic 24px Arial';
@@ -136,7 +136,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
     y += 100;
 
-    // Mensaje de confianza
+    // Mensaje de confianza simplificado
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
@@ -144,9 +144,7 @@ async function generarReciboYEnviar(telefono) {
     y += 60;
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
-    ctx.fillText('Estamos validando tu comprobante', width / 2, y);
-    y += 50;
-    ctx.fillText('y en minutos te confirmaremos.', width / 2, y);
+    ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
     y += 120;
 
     // Información oficial
@@ -167,12 +165,12 @@ async function generarReciboYEnviar(telefono) {
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp (con ID de operación para que lo copie)
+    // Enviar por WhatsApp (mensaje simplificado)
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
       to: `whatsapp:+${telefono}`,
-      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\nEstamos validándolo y en minutos te confirmaremos.\n\nGracias por confiar en nosotros.`,
+      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\nEstamos validando tu comprobante.\n\nGracias por confiar en nosotros.`,
       mediaUrl: [mediaUrl]
     });
     console.log('Recibo oficial enviado a:', telefono);
@@ -219,5 +217,5 @@ app.post('/whatsapp', async (req, res) => {
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Arcangel 1.5 Oficial corriendo en puerto ${PORT}`);
+  console.log(`Grupo Exequial Arcángel C.A. corriendo en puerto ${PORT}`);
 });
