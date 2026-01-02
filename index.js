@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión final - enero 2026)
+// index.js - Grupo Exequial Arcángel C.A. (versión final - footer dentro del marco)
 
 require('dotenv').config();
 
@@ -59,7 +59,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial
+// Generar recibo oficial (footer más arriba y dentro del marco)
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -73,7 +73,7 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1150;
+    const height = 1050; // Reducido para que el footer quede más arriba
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -134,7 +134,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 120;
+    y += 100;
 
     // Mensaje de confianza
     ctx.font = 'bold 24px Arial';
@@ -145,9 +145,9 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += 140;
+    y += 80; // Espacio antes del footer
 
-    // Información oficial (todo dentro del marco)
+    // Información oficial (más arriba, todo dentro del marco)
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 20px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
@@ -157,7 +157,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText('Dirección: Av. Urdaneta C/C Calle Arvelo Nº 81-6', width / 2, y);
     y += 40;
     ctx.fillText('Frente a la Plaza Santa Rosa, Valencia', width / 2, y);
-    y += 60;
+    y += 50;
     ctx.font = 'bold 20px Arial';
     ctx.fillText('Telf. 0241-8353240 / 0414-4715376', width / 2, y);
 
