@@ -1,8 +1,8 @@
-// index.js - Grupo Exequial Arcángel C.A. (RIF debajo del título)
+// index.js - Grupo Exequial Arcángel C.A. (mensaje de validación más arriba)
 
 require('dotenv').config();
 
-const express = require('express');
+const express = require('express';
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
@@ -79,7 +79,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (RIF debajo del título)
+// Generar recibo oficial (mensaje de validación más arriba)
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -158,15 +158,15 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 120;
+    y += 100;
 
-    // Mensaje de confianza
-    ctx.font = 'bold 24px Arial';
+    // Mensaje de confianza (subido más arriba)
+    ctx.font = 'bold 28px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
     ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
-    y += 60;
-    ctx.font = '20px Arial';
+    y += 70;
+    ctx.font = '22px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
 
