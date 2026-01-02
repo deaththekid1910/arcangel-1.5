@@ -1,11 +1,11 @@
-// index.js - Arcangel 1.5 Final (dirección y teléfonos dentro del marco azul)
+// index.js - Grupo Exequial Arcángel C.A. (versión final - enero 2026)
 
 require('dotenv').config();
 
-const express = require('express';
+const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const fs = require('fs';
+const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const Twilio = require('twilio');
@@ -59,7 +59,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (dirección y teléfonos dentro del marco)
+// Generar recibo oficial
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -73,7 +73,7 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1150; // Aumentado para dar más espacio al footer
+    const height = 1150;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -147,7 +147,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
     y += 140;
 
-    // Información oficial (dentro del marco azul)
+    // Información oficial (todo dentro del marco)
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 20px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
