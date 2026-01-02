@@ -1,10 +1,10 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión final definitiva)
+// index.js - Grupo Exequial Arcángel C.A. (versión final compacta)
 
 require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios');
+const axios = require('axios';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -79,7 +79,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial
+// Generar recibo oficial (mensaje compacto y más arriba)
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -93,7 +93,7 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1000;
+    const height = 950; // Reducido para más compacto
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -158,15 +158,15 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 100;
+    y += 80;
 
-    // Mensaje de confianza (más arriba y destacado)
-    ctx.font = 'bold 28px Arial';
+    // Mensaje de confianza compacto y más arriba
+    ctx.font = 'bold 26px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
     ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
-    y += 70;
-    ctx.font = '22px Arial';
+    y += 60;
+    ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
 
@@ -174,12 +174,12 @@ async function generarReciboYEnviar(telefono) {
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp
+    // Enviar por WhatsApp (mensaje compacto)
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
       to: `whatsapp:+${telefono}`,
-      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\nEstamos validando tu comprobante.\n\nGracias por confiar en nosotros.`,
+      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\n¡Tu pago ha sido recibido correctamente! Estamos validando tu comprobante.\n\nGracias por confiar en nosotros.`,
       mediaUrl: [mediaUrl]
     });
     console.log('Recibo oficial enviado a:', telefono);
