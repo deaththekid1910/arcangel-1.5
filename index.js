@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión final - footer dentro del marco)
+// index.js - Grupo Exequial Arcángel C.A. (final - sin dirección/teléfonos + anti-duplicados)
 
 require('dotenv').config();
 
@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const Twilio = require('twilio');
 const { google } = require('googleapis');
@@ -42,6 +43,9 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 // Logo URL
 const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
+// Set para almacenar hashes de imágenes procesadas (anti-duplicados)
+const processedHashes = new Set();
+
 // Descargar imagen del comprobante
 async function descargarImagen(mediaUrl, telefono) {
   try {
@@ -53,13 +57,30 @@ async function descargarImagen(mediaUrl, telefono) {
     fs.writeFileSync(filePath, response.data);
     console.log('Comprobante guardado:', filePath);
 
+    // Calcular hash de la imagen para detectar duplicados
+    const imageBuffer = response.data;
+    const hash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
+
+    if (processedHashes.has(hash)) {
+      console.log('Duplicado detectado para:', telefono);
+      await client.messages.create({
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:+${telefono}`,
+        body: 'Ya recibimos y procesamos tu comprobante de pago anteriormente.\n\nSi necesitas asistencia adicional, escríbenos.\n\nGracias por confiar en Grupo Exequial Arcángel C.A.'
+      });
+      return; // No genera nuevo recibo
+    }
+
+    // Si no es duplicado, agrega el hash y procesa
+    processedHashes.add(hash);
+
     await generarReciboYEnviar(telefono);
   } catch (error) {
     console.error('Error descargando imagen:', error.message);
   }
 }
 
-// Generar recibo oficial (footer más arriba y dentro del marco)
+// Generar recibo oficial (sin dirección ni teléfonos)
 async function generarReciboYEnviar(telefono) {
   try {
     // Fecha y hora actual en Venezuela
@@ -73,7 +94,7 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 1050; // Reducido para que el footer quede más arriba
+    const height = 1000;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
@@ -134,7 +155,7 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`Fecha: ${fechaRecepción}`, 80, y);
     y += 60;
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
-    y += 100;
+    y += 120;
 
     // Mensaje de confianza
     ctx.font = 'bold 24px Arial';
@@ -145,21 +166,12 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = '20px Arial';
     ctx.fillStyle = '#374151';
     ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
-    y += 80; // Espacio antes del footer
+    y += 120;
 
-    // Información oficial (más arriba, todo dentro del marco)
+    // Solo RIF (sin dirección ni teléfonos)
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 20px Arial';
     ctx.fillText('RIF: J-40472273', width / 2, y);
-    y += 50;
-    ctx.font = '18px Arial';
-    ctx.fillStyle = '#374151';
-    ctx.fillText('Dirección: Av. Urdaneta C/C Calle Arvelo Nº 81-6', width / 2, y);
-    y += 40;
-    ctx.fillText('Frente a la Plaza Santa Rosa, Valencia', width / 2, y);
-    y += 50;
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText('Telf. 0241-8353240 / 0414-4715376', width / 2, y);
 
     // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
