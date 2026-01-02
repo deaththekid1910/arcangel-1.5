@@ -4,7 +4,7 @@ require('dotenv').config();
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios';
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -57,7 +57,6 @@ async function descargarImagen(mediaUrl, telefono) {
     fs.writeFileSync(filePath, response.data);
     console.log('Comprobante guardado:', filePath);
 
-    // Hash para detectar duplicados
     const imageBuffer = response.data;
     const hash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
 
@@ -79,10 +78,9 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo oficial (mensaje compacto y más arriba)
+// Generar recibo oficial (mensaje compacto)
 async function generarReciboYEnviar(telefono) {
   try {
-    // Fecha y hora actual en Venezuela
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
     const horaRecepción = fechaVenezuela.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
     const fechaRecepción = fechaVenezuela.toLocaleDateString('es-VE');
@@ -93,20 +91,17 @@ async function generarReciboYEnviar(telefono) {
     const comprobanteUrl = `${process.env.APP_URL}/uploads/${telefono}.jpg`;
 
     const width = 600;
-    const height = 950; // Reducido para más compacto
+    const height = 950;
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Fondo
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
 
-    // Borde elegante
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
 
-    // Logo
     try {
       const logo = await loadImage(LOGO_URL);
       const logoSize = 180;
@@ -115,7 +110,6 @@ async function generarReciboYEnviar(telefono) {
       console.log('Error cargando logo:', e.message);
     }
 
-    // Check grande
     ctx.fillStyle = '#16a34a';
     ctx.font = 'bold 100px Arial';
     ctx.textAlign = 'center';
@@ -125,7 +119,6 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'bold 32px Arial';
     ctx.fillText('PAGO RECIBIDO', width / 2, 360);
 
-    // Título + RIF debajo
     ctx.fillStyle = '#1e3a8a';
     ctx.font = 'bold 36px Arial';
     ctx.fillText('Grupo Exequial Arcángel C.A.', width / 2, 440);
@@ -138,7 +131,6 @@ async function generarReciboYEnviar(telefono) {
     ctx.font = 'italic 24px Arial';
     ctx.fillText('Comprobante de Recepción', width / 2, 530);
 
-    // Línea dorada
     ctx.strokeStyle = '#fbbf24';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -146,7 +138,6 @@ async function generarReciboYEnviar(telefono) {
     ctx.lineTo(width - 80, 570);
     ctx.stroke();
 
-    // Datos personalizados
     ctx.fillStyle = '#1f2937';
     ctx.font = '22px Arial';
     ctx.textAlign = 'left';
@@ -160,21 +151,14 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
     y += 80;
 
-    // Mensaje de confianza compacto y más arriba
     ctx.font = 'bold 26px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
-    ctx.fillText('¡Tu pago ha sido recibido correctamente!', width / 2, y);
-    y += 60;
-    ctx.font = '20px Arial';
-    ctx.fillStyle = '#374151';
-    ctx.fillText('Estamos validando tu comprobante.', width / 2, y);
+    ctx.fillText('¡Tu pago ha sido recibido correctamente! Estamos validando tu comprobante.', width / 2, y);
 
-    // Guardar PNG
     const buffer = canvas.toBuffer('image/png');
     fs.writeFileSync(reciboPath, buffer);
 
-    // Enviar por WhatsApp (mensaje compacto)
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
     await client.messages.create({
       from: 'whatsapp:+14155238886',
@@ -184,7 +168,6 @@ async function generarReciboYEnviar(telefono) {
     });
     console.log('Recibo oficial enviado a:', telefono);
 
-    // Registrar en Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'A:D',
