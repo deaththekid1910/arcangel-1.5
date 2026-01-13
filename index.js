@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión final - texto abajo pequeño y compacto)
+// index.js - Grupo Exequial Arcángel C.A. (versión Meta Cloud API - número de prueba)
 
 require('dotenv').config();
 
@@ -9,14 +9,13 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const Twilio = require('twilio');
 const { google } = require('googleapis');
 const { createCanvas, loadImage } = require('canvas');
 
-// Twilio
-const accountSid = process.env.TWILIO_SID;
-const authToken = process.env.TWILIO_AUTH;
-const client = new Twilio(accountSid, authToken);
+// Meta Cloud API variables
+const META_TOKEN = process.env.META_TOKEN || 'EAAZAQL7LBqvIBQXlYZCotJPHdmHCfATtvEjhV5PwSSqWeOyYzKBzAMdg6TWTsMEhXuZBUieJn3SjZABW674Dc1hLWC50g2bZBnoMpqiJjDYYyDHy9AqZCwIz9Mu7ZBBtLOt52ecnYYYqrVuWqgEtY6IjFVakwlcaLXDGkAEVDnv3LeM1IdjBNsvj7aEIdZA6SMBTgtyCvdlzDseFC7hlUCAqf54OvP13ZAIT0jlK7k5QSNKT5uBdSiIyZCmSHfLkIimpDUZALgtdGx95mbSGB6a95pALwZDZD'; // Tu token
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || '912323848636225'; // Número de prueba que te dio Meta
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'mi-token-secreto-123'; // Pon el mismo que configuraste en Meta Webhook
 
 // Google Sheets
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
@@ -35,23 +34,83 @@ if (!fs.existsSync(RECIBOS_DIR)) fs.mkdirSync(RECIBOS_DIR, { recursive: true });
 
 // Express
 const app = express();
-app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
 app.use('/recibos', express.static(RECIBOS_DIR));
 app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Logo URL
 const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5/main/WhatsApp_Image_2026-01-01_at_7.18.14_PM-removebg-preview.png';
 
-// Set para hashes de imágenes procesadas (anti-duplicados)
+// Anti-duplicados
 const processedHashes = new Set();
 
-// Descargar imagen del comprobante
+// Verificación del webhook (GET)
+app.get('/webhook', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode && token && mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log('Webhook verificado por Meta!');
+    res.status(200).send(challenge);
+  } else {
+    res.sendStatus(403);
+  }
+});
+
+// Recepción de mensajes (POST)
+app.post('/webhook', async (req, res) => {
+  try {
+    const body = req.body;
+
+    if (body.object !== 'whatsapp_business_account') {
+      return res.sendStatus(404);
+    }
+
+    const entry = body.entry[0];
+    const change = entry.changes[0];
+    const value = change.value;
+
+    if (value.messages && value.messages[0]) {
+      const message = value.messages[0];
+      const from = message.from; // Número del cliente (ej: 58414...)
+      const type = message.type;
+
+      console.log(`Mensaje recibido de ${from} - Tipo: ${type}`);
+
+      if (type === 'image') {
+        const mediaId = message.image.id;
+        const mediaUrl = await getMediaUrl(mediaId);
+        await descargarImagen(mediaUrl, from);
+      } else {
+        // Mensaje de texto o saludo inicial
+        await sendMessage(from, '¡Hola! Envía el capture de tu pago para generar tu recibo oficial.');
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error en webhook Meta:', error.message);
+    res.sendStatus(500);
+  }
+});
+
+// Obtener URL de media (para descargar imágenes)
+async function getMediaUrl(mediaId) {
+  const response = await axios.get(`https://graph.facebook.com/v19.0/${mediaId}`, {
+    headers: { Authorization: `Bearer ${META_TOKEN}` }
+  });
+  return response.data.url;
+}
+
+// Descargar imagen y procesar (tu lógica actual adaptada)
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
       responseType: 'arraybuffer',
-      auth: { username: accountSid, password: authToken }
+      headers: { Authorization: `Bearer ${META_TOKEN}` }
     });
     const filePath = path.join(UPLOADS_DIR, `${telefono}.jpg`);
     fs.writeFileSync(filePath, response.data);
@@ -62,23 +121,18 @@ async function descargarImagen(mediaUrl, telefono) {
 
     if (processedHashes.has(hash)) {
       console.log('Duplicado detectado para:', telefono);
-      await client.messages.create({
-        from: 'whatsapp:+14155238886',
-        to: `whatsapp:+${telefono}`,
-        body: 'Ya recibimos y procesamos tu comprobante de pago anteriormente.\n\nSi necesitas asistencia adicional, escríbenos.\n\nGracias por confiar en Grupo Exequial Arcángel C.A.'
-      });
+      await sendMessage(telefono, 'Ya recibimos y procesamos tu comprobante de pago anteriormente.\n\nSi necesitas asistencia adicional, escríbenos.\n\nGracias por confiar en Grupo Exequial Arcángel C.A.');
       return;
     }
 
     processedHashes.add(hash);
-
     await generarReciboYEnviar(telefono);
   } catch (error) {
     console.error('Error descargando imagen:', error.message);
   }
 }
 
-// Generar recibo oficial (texto abajo más pequeño y compacto)
+// Generar recibo (tu lógica actual)
 async function generarReciboYEnviar(telefono) {
   try {
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
@@ -95,9 +149,9 @@ async function generarReciboYEnviar(telefono) {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
+    // Tu diseño actual (fondo, borde, logo, check, etc.)
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
-
     ctx.strokeStyle = '#1e3a8a';
     ctx.lineWidth = 8;
     ctx.strokeRect(20, 20, width - 40, height - 40);
@@ -151,7 +205,6 @@ async function generarReciboYEnviar(telefono) {
     ctx.fillText(`ID de operación: ${idOperacion}`, 80, y);
     y += 60;
 
-    // Mensaje de confianza más pequeño y compacto (en dos líneas para que no desborde)
     ctx.font = 'bold 22px Arial';
     ctx.fillStyle = '#15803d';
     ctx.textAlign = 'center';
@@ -165,14 +218,13 @@ async function generarReciboYEnviar(telefono) {
     fs.writeFileSync(reciboPath, buffer);
 
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
-    await client.messages.create({
-      from: 'whatsapp:+14155238886',
-      to: `whatsapp:+${telefono}`,
-      body: `¡Hola!\n\nRecibimos tu comprobante a las ${horaRecepción} del ${fechaRecepción}.\n\nTu código de operación es:\n*${idOperacion}*\n\n¡Tu pago ha sido recibido correctamente! Estamos validando tu comprobante.\n\nGracias por confiar en nosotros.`,
-      mediaUrl: [mediaUrl]
-    });
+
+    // Enviar recibo con Meta
+    await sendMediaMessage(telefono, mediaUrl, 'Tu recibo oficial ha sido generado.');
+
     console.log('Recibo oficial enviado a:', telefono);
 
+    // Registrar en Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'A:D',
@@ -182,37 +234,48 @@ async function generarReciboYEnviar(telefono) {
       }
     });
     console.log('Registrado en Sheets:', idOperacion);
-
   } catch (error) {
     console.error('Error generando/enviando recibo:', error.message);
   }
 }
 
-// Webhook
-app.post('/whatsapp', async (req, res) => {
-  try {
-    const from = req.body.From?.replace('whatsapp:+', '');
-    const numMedia = parseInt(req.body.NumMedia || '0');
-
-    if (numMedia > 0 && req.body.MediaUrl0) {
-      await descargarImagen(req.body.MediaUrl0, from);
-    } else {
-      await client.messages.create({
-        from: 'whatsapp:+14155238886',
-        to: `whatsapp:+${from}`,
-        body: 'Hola, por favor envía el capture de tu pago para generar tu comprobante oficial.'
-      });
+// Función para enviar mensaje de texto con Meta
+async function sendMessage(to, text) {
+  await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to,
+    type: 'text',
+    text: { body: text }
+  }, {
+    headers: {
+      Authorization: `Bearer ${META_TOKEN}`,
+      'Content-Type': 'application/json'
     }
+  });
+}
 
-    res.send('<Response></Response>');
-  } catch (error) {
-    console.error('Error webhook:', error.message);
-    res.status(500).send('Error');
-  }
-});
+// Función para enviar media (recibo PNG)
+async function sendMediaMessage(to, mediaUrl, caption) {
+  await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
+    messaging_product: 'whatsapp',
+    recipient_type: 'individual',
+    to: to,
+    type: 'image',
+    image: {
+      link: mediaUrl,
+      caption: caption
+    }
+  }, {
+    headers: {
+      Authorization: `Bearer ${META_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
 
 // Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Grupo Exequial Arcángel C.A. corriendo en puerto ${PORT}`);
+  console.log(`Grupo Exequial Arcángel C.A. corriendo en puerto ${PORT} con Meta Cloud API`);
 });
