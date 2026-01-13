@@ -1,4 +1,4 @@
-// index.js - Grupo Exequial Arcángel C.A. (versión Meta Cloud API - número de prueba)
+// index.js - Grupo Exequial Arcángel C.A. (versión Meta Cloud API - número de prueba - funcional)
 
 require('dotenv').config();
 
@@ -12,13 +12,13 @@ const { v4: uuidv4 } = require('uuid');
 const { google } = require('googleapis');
 const { createCanvas, loadImage } = require('canvas');
 
-// Meta Cloud API variables
+// Meta Cloud API variables (deben estar en Render Environment)
 const META_TOKEN = process.env.META_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'arcangel-secreto-2026'; // Cambia si usas otro
 
 // Google Sheets
-const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || '{}');
 const authSheets = new google.auth.GoogleAuth({
   credentials: creds,
   scopes: ['https://www.googleapis.com/auth/spreadsheets']
@@ -76,13 +76,16 @@ app.post('/webhook', async (req, res) => {
       return res.sendStatus(404);
     }
 
-    const entry = body.entry[0];
-    const change = entry.changes[0];
-    const value = change.value;
+    const entry = body.entry?.[0];
+    if (!entry) return res.sendStatus(200);
 
+    const change = entry.changes?.[0];
+    if (!change) return res.sendStatus(200);
+
+    const value = change.value;
     if (value.messages && value.messages[0]) {
       const message = value.messages[0];
-      const from = message.from; // Número del cliente (ej: 58414...)
+      const from = message.from; // Número del cliente (ej: 584247559929)
       const type = message.type;
 
       console.log(`Mensaje recibido de ${from} - Tipo: ${type}`);
@@ -104,7 +107,7 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Obtener URL de media (para descargar imágenes)
+// Obtener URL de media
 async function getMediaUrl(mediaId) {
   const response = await axios.get(`https://graph.facebook.com/v19.0/${mediaId}`, {
     headers: { Authorization: `Bearer ${META_TOKEN}` }
@@ -139,7 +142,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo (tu lógica original)
+// Generar recibo (tu diseño original)
 async function generarReciboYEnviar(telefono) {
   try {
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
@@ -225,12 +228,10 @@ async function generarReciboYEnviar(telefono) {
 
     const mediaUrl = `${process.env.APP_URL}/recibos/${telefono}.png`;
 
-    // Enviar recibo con Meta
     await sendMediaMessage(telefono, mediaUrl, 'Tu recibo oficial ha sido generado.');
 
     console.log('Recibo oficial enviado a:', telefono);
 
-    // Registrar en Sheets
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
       range: 'A:D',
@@ -245,39 +246,59 @@ async function generarReciboYEnviar(telefono) {
   }
 }
 
-// Enviar mensaje de texto con Meta
+// Enviar mensaje de texto
 async function sendMessage(to, text) {
-  await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to: to,
-    type: 'text',
-    text: { body: text }
-  }, {
-    headers: {
-      Authorization: `Bearer ${META_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  try {
+    const cleanTo = to.replace(/[^0-9]/g, ''); // Limpia a solo dígitos
+    const response = await axios.post(
+      `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanTo,
+        type: 'text',
+        text: { body: text }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${META_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log('Texto enviado:', response.data);
+  } catch (error) {
+    console.error('Error enviando texto:', error.response?.data || error.message);
+  }
 }
 
-// Enviar media (recibo PNG)
+// Enviar media (imagen)
 async function sendMediaMessage(to, mediaUrl, caption) {
-  await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
-    messaging_product: 'whatsapp',
-    recipient_type: 'individual',
-    to: to,
-    type: 'image',
-    image: {
-      link: mediaUrl,
-      caption: caption
-    }
-  }, {
-    headers: {
-      Authorization: `Bearer ${META_TOKEN}`,
-      'Content-Type': 'application/json'
-    }
-  });
+  try {
+    const cleanTo = to.replace(/[^0-9]/g, ''); // Limpia a solo dígitos
+    const response = await axios.post(
+      `https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanTo,
+        type: 'image',
+        image: {
+          link: mediaUrl,
+          caption: caption
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${META_TOKEN}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    console.log('Media enviada:', response.data);
+  } catch (error) {
+    console.error('Error enviando media:', error.response?.data || error.message);
+  }
 }
 
 // Servidor
