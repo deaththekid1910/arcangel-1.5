@@ -13,9 +13,9 @@ const { google } = require('googleapis');
 const { createCanvas, loadImage } = require('canvas');
 
 // Meta Cloud API variables
-const META_TOKEN = process.env.META_TOKEN || 'EAAZAQL7LBqvIBQXlYZCotJPHdmHCfATtvEjhV5PwSSqWeOyYzKBzAMdg6TWTsMEhXuZBUieJn3SjZABW674Dc1hLWC50g2bZBnoMpqiJjDYYyDHy9AqZCwIz9Mu7ZBBtLOt52ecnYYYqrVuWqgEtY6IjFVakwlcaLXDGkAEVDnv3LeM1IdjBNsvj7aEIdZA6SMBTgtyCvdlzDseFC7hlUCAqf54OvP13ZAIT0jlK7k5QSNKT5uBdSiIyZCmSHfLkIimpDUZALgtdGx95mbSGB6a95pALwZDZD'; // Tu token
-const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID || '912323848636225'; // Número de prueba que te dio Meta
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || 'mi-token-secreto-123'; // Pon el mismo que configuraste en Meta Webhook
+const META_TOKEN = process.env.META_TOKEN;
+const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 // Google Sheets
 const creds = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
@@ -46,17 +46,24 @@ const LOGO_URL = 'https://raw.githubusercontent.com/deaththekid1910/arcangel-1.5
 // Anti-duplicados
 const processedHashes = new Set();
 
-// Verificación del webhook (GET)
+// Verificación del webhook (GET) - OBLIGATORIO para Meta
 app.get('/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode && token && mode === 'subscribe' && token === VERIFY_TOKEN) {
-    console.log('Webhook verificado por Meta!');
-    res.status(200).send(challenge);
+  console.log('Verificación recibida:', { mode, token, challenge });
+
+  if (mode && token) {
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      console.log('Webhook verificado por Meta!');
+      res.status(200).send(challenge);
+    } else {
+      console.log('Token inválido');
+      res.sendStatus(403);
+    }
   } else {
-    res.sendStatus(403);
+    res.sendStatus(400);
   }
 });
 
@@ -105,7 +112,7 @@ async function getMediaUrl(mediaId) {
   return response.data.url;
 }
 
-// Descargar imagen y procesar (tu lógica actual adaptada)
+// Descargar imagen y procesar
 async function descargarImagen(mediaUrl, telefono) {
   try {
     const response = await axios.get(mediaUrl, {
@@ -132,7 +139,7 @@ async function descargarImagen(mediaUrl, telefono) {
   }
 }
 
-// Generar recibo (tu lógica actual)
+// Generar recibo (tu lógica original)
 async function generarReciboYEnviar(telefono) {
   try {
     const fechaVenezuela = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Caracas' }));
@@ -149,7 +156,6 @@ async function generarReciboYEnviar(telefono) {
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext('2d');
 
-    // Tu diseño actual (fondo, borde, logo, check, etc.)
     ctx.fillStyle = '#f8f9fc';
     ctx.fillRect(0, 0, width, height);
     ctx.strokeStyle = '#1e3a8a';
@@ -239,7 +245,7 @@ async function generarReciboYEnviar(telefono) {
   }
 }
 
-// Función para enviar mensaje de texto con Meta
+// Enviar mensaje de texto con Meta
 async function sendMessage(to, text) {
   await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
     messaging_product: 'whatsapp',
@@ -255,7 +261,7 @@ async function sendMessage(to, text) {
   });
 }
 
-// Función para enviar media (recibo PNG)
+// Enviar media (recibo PNG)
 async function sendMediaMessage(to, mediaUrl, caption) {
   await axios.post(`https://graph.facebook.com/v19.0/${PHONE_NUMBER_ID}/messages`, {
     messaging_product: 'whatsapp',
